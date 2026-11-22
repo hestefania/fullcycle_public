@@ -197,8 +197,10 @@ GOOGLE_API_KEY=sua_chave_google
 
 # Modelo de linguagem
 CHAT_MODEL=gpt-4.1-mini
-Importante: substitua as chaves pelas suas credenciais válidas. Nunca publique o arquivo .env com credenciais reais no GitHub.
 ```
+
+Importante: substitua as chaves pelas suas credenciais válidas. Nunca publique o arquivo .env com credenciais reais no GitHub.
+
 
 
 
