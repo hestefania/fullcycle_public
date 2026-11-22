@@ -1,177 +1,364 @@
-# Ingestão e Busca Semântica com LangChain e Postgres
 
-## Objetivo
+# Ingestão e Busca Semântica com LangChain, PostgreSQL e pgVector
 
-Você deve entregar um software capaz de:
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![LangChain](https://img.shields.io/badge/LangChain-Framework-green)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-blue)
+![pgVector](https://img.shields.io/badge/pgVector-Vector%20Database-orange)
+![OpenAI](https://img.shields.io/badge/OpenAI-Embeddings%20%7C%20LLM-black)
 
-- Ingestão: Ler um arquivo PDF e salvar suas informações em um banco de dados PostgreSQL com extensão pgVector.
-- Busca: Permitir que o usuário faça perguntas via linha de comando (CLI) e receba respostas baseadas apenas no conteúdo do PDF.
+## Sobre o projeto
 
-## Exemplo no CLI
+Este projeto implementa uma solução de **RAG (Retrieval-Augmented Generation)** utilizando Python, LangChain, PostgreSQL e pgVector.
 
-Faça sua pergunta:
+O objetivo é permitir a ingestão de documentos PDF, transformar seu conteúdo em vetores (embeddings), armazená-los em um banco de dados vetorial e disponibilizar uma interface de conversação via terminal.
 
-```
-PERGUNTA: Qual o faturamento da Empresa SuperTechIABrazil?
-RESPOSTA: O faturamento foi de 10 milhões de reais.
+As respostas são geradas por um modelo de linguagem (LLM), utilizando como contexto os documentos recuperados por similaridade semântica.
 
----
+O sistema foi desenvolvido como parte do desafio de Ingestão e Busca Semântica da Full Cycle.
 
-Perguntas fora do contexto:
+## Arquitetura da solução
 
-PERGUNTA: Quantos clientes temos em 2024?
-RESPOSTA: Não tenho informações necessárias para responder sua pergunta.
-```
+O projeto está organizado em duas etapas principais:
 
-## Tecnologias obrigatórias
+### 1. Ingestão de documentos
 
-- Linguagem: Python
-- Framework: LangChain
-- Banco de dados: PostgreSQL + pgVector
-- Execução do banco de dados: Docker & Docker Compose (docker-compose fornecido no repositório de exemplo)
+- Leitura de arquivos PDF.
+- Extração do conteúdo textual.
+- Divisão do documento em chunks.
+- Geração de embeddings.
+- Armazenamento dos vetores no PostgreSQL utilizando pgVector.
 
-## Pacotes recomendados
+### 2. Busca semântica e Chat RAG
 
-- Split: `from langchain_text_splitters import RecursiveCharacterTextSplitter`
-- Embeddings (OpenAI): `from langchain_openai import OpenAIEmbeddings`
-- Embeddings (Gemini): `from langchain_google_genai import GoogleGenerativeAIEmbeddings`
-- PDF: `from langchain_community.document_loaders import PyPDFLoader`
-- Ingestão: `from langchain_postgres import PGVector`
-- Busca: `similarity_search_with_score(query, k=10)`
+- Recebimento de perguntas via terminal.
+- Conversão da pergunta em embedding.
+- Recuperação dos 10 documentos mais relevantes.
+- Construção do contexto para o modelo de linguagem.
+- Envio do contexto e da pergunta para a LLM.
+- Retorno da resposta ao usuário.
 
-## OpenAI
+O sistema utiliza instruções para restringir as respostas ao conteúdo recuperado dos documentos.
 
-- Crie uma API Key da OpenAI.
-- Você vai precisar de um modelo de embeddings e de um modelo de LLM para responder. Consulte a documentação oficial da OpenAI para ver os modelos disponíveis.
+## Tecnologias utilizadas
 
-## Gemini
+| Tecnologia | Finalidade |
+|---|---|
+| Python | Linguagem principal |
+| LangChain | Orquestração do RAG |
+| OpenAI | Modelo de linguagem e embeddings |
+| Google Gemini | Alternativa para geração de embeddings |
+| PostgreSQL 17 | Banco de dados |
+| pgVector | Armazenamento e busca vetorial |
+| Docker | Containerização do banco |
+| Docker Compose | Orquestração dos containers |
+| PyPDF | Extração de conteúdo PDF |
 
-- Crie uma API Key da Google.
-- Você vai precisar de um modelo de embeddings e de um modelo de LLM para responder. Consulte a documentação oficial do Google para ver os modelos disponíveis.
 
-Os limites de requisições gratuitas dos modelos podem mudar com frequência. Para informações atualizadas, consulte a documentação oficial do Google.
 
-## Escolha dos modelos
 
-Este desafio não fixa modelos. Nomes e versões mudam com frequência e alguns são descontinuados, então faz parte do desafio consultar a documentação oficial do provedor que você escolher, ver quais modelos estão disponíveis no momento e selecionar os que atendem ao objetivo. Para o volume deste desafio, os modelos mais leves e baratos de cada provedor são suficientes.
 
-Atenção: modelos de embedding diferentes geram vetores com dimensões diferentes. A tabela de vetores é criada na primeira ingestão, já com a dimensão do modelo que você escolheu. Se você trocar de modelo de embeddings depois disso, a ingestão passa a falhar por incompatibilidade de dimensão. Nesse caso é responsabilidade sua apagar a collection existente (ou o volume do banco) e refazer a ingestão do zero com o novo modelo.
 
-## Requisitos
 
-### 1. Ingestão do PDF
+## Estrutura do projeto
 
-- O PDF deve ser dividido em chunks de 1000 caracteres com overlap de 150.
-- Cada chunk deve ser convertido em embedding.
-- Os vetores devem ser armazenados no banco de dados PostgreSQL com pgVector.
-
-### 2. Consulta via CLI
-
-Criar um script Python para simular um chat no terminal.
-
-Passos ao receber uma pergunta:
-
-- Vetorizar a pergunta.
-- Buscar os 10 resultados mais relevantes (k=10) no banco vetorial.
-- Montar o prompt e chamar a LLM.
-- Retornar a resposta ao usuário.
-
-Prompt a ser utilizado:
-
-```
-CONTEXTO:
-{resultados concatenados do banco de dados}
-
-REGRAS:
-- Responda somente com base no CONTEXTO.
-- Se a informação não estiver explicitamente no CONTEXTO, responda:
-  "Não tenho informações necessárias para responder sua pergunta."
-- Nunca invente ou use conhecimento externo.
-- Nunca produza opiniões ou interpretações além do que está escrito.
-
-EXEMPLOS DE PERGUNTAS FORA DO CONTEXTO:
-Pergunta: "Qual é a capital da França?"
-Resposta: "Não tenho informações necessárias para responder sua pergunta."
-
-Pergunta: "Quantos clientes temos em 2024?"
-Resposta: "Não tenho informações necessárias para responder sua pergunta."
-
-Pergunta: "Você acha isso bom ou ruim?"
-Resposta: "Não tenho informações necessárias para responder sua pergunta."
-
-PERGUNTA DO USUÁRIO:
-{pergunta do usuário}
-
-RESPONDA A "PERGUNTA DO USUÁRIO"
-```
-
-## Estrutura obrigatória do projeto
-
-Faça um fork do repositório para utilizar a estrutura abaixo: https://github.com/devfullcycle/mba-ia-desafio-ingestao-busca
-
-```
+```text
+ingestao-busca/
+│
 ├── docker-compose.yml
-├── requirements.txt      # Dependências
-├── .env.example          # Template das variáveis de ambiente
-├── src/
-│   ├── ingest.py         # Script de ingestão do PDF
-│   ├── search.py         # Script de busca
-│   ├── chat.py           # CLI para interação com usuário
-├── document.pdf          # PDF para ingestão
-└── README.md             # Instruções de execução
+├── requirements.txt
+├── .env
+├── .env.example
+├── docs/
+│   └── document.pdf
+│
+└── src/
+    ├── __init__.py
+    ├── config.py
+    ├── embeddings.py
+    ├── ingest.py
+    ├── search.py
+    └── chat.py
 ```
 
-## Atualizar as chaves :
-Atualizar as chaves no arquivo de .env
-OPENAI_API_KEY=
-GOOGLE_API_KEY=
+## Descrição dos arquivos
+
+- **`docker-compose.yml`**: configuração do PostgreSQL 17 com pgVector.
+- **`requirements.txt`**: dependências Python.
+- **`.env`**: configurações e credenciais do projeto.
+- **`.env.example`**: modelo das variáveis de ambiente.
+- **`docs/document.pdf`**: documento utilizado na ingestão.
+- **`src/config.py`**: configurações de conexão com PostgreSQL.
+- **`src/embeddings.py`**: configuração dos provedores de embeddings.
+- **`src/ingest.py`**: processamento e armazenamento dos documentos.
+- **`src/search.py`**: construção do prompt de consulta.
+- **`src/chat.py`**: interface de conversação via terminal.
+ 
+
+### Pré-requisitos
+Antes de executar o projeto, é necessário possuir:
+
+Python 3.10 ou superior.
+
+Docker Desktop.
+
+Docker Compose.
+
+Chave de API da OpenAI.
+
+Acesso à internet para utilização dos serviços de IA.
 
 
-## Executar requirements.txt  se necessario   
-pip install -r requirements.txt
+## Configuração do ambiente
 
+### 1. Clonar o repositório
 
-## VirtualEnv para Python
-
-Crie e ative um ambiente virtual antes de instalar dependências:
-
+```bash
+git clone https://github.com/hestefania/fullcycle_public.git
 ```
+ Acesse a pasta do projeto:
+
+
+```bash
+cd fullcycle_public/ingestao-busca
+```
+
+### 2. Criar o ambiente virtual
+Windows (PowerShell):
+
+
+``` powershell
+python -m venv venv
+```
+Ativar:
+
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+Caso exista bloqueio de execução de scripts:
+
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+Linux / macOS:
+
+```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-para windows : .\venv\Scripts\Activate.ps1
+### 3. Instalar as dependências
+Com o ambiente virtual ativado:
+
+
+```bash
+python -m pip install --upgrade pip
+```
+
+Instalar as bibliotecas:
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configurar as variáveis de ambiente
+Crie um arquivo .env na raiz do projeto.
+
+Utilize o seguinte modelo:
+
+
+
+```env
+
+# PostgreSQL
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=rag
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+
+# Documentos
+PDF_PATH=./docs/document.pdf
+
+# Embeddings
+EMBEDDING_PROVIDER=openai
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+GOOGLE_EMBEDDING_MODEL=models/embedding-001
+
+# PostgreSQL Vector
+PG_VECTOR_COLLECTION_NAME=documentos_pdf
+
+# API Keys
+OPENAI_API_KEY=sua_chave_openai
+GOOGLE_API_KEY=sua_chave_google
+
+# Modelo de linguagem
+CHAT_MODEL=gpt-4.1-mini
+Importante: substitua as chaves pelas suas credenciais válidas. Nunca publique o arquivo .env com credenciais reais no GitHub.
+```
+
+
+
+
+##  Executando o projeto
+A execução deve seguir a ordem abaixo.
+
+### 1. Iniciar o PostgreSQL com Docker
+Execute na raiz do projeto:
+
+```bash
+docker compose up -d
+```
+
+O Docker Compose iniciará:
+
+- PostgreSQL 17.
+- Extensão pgVector.
+- Volume persistente para os dados do banco.
+
+Verifique os containers: 
+```bash
+docker compose ps
+```
+
+### 2. Executar a ingestão dos documentos
+Com o banco de dados iniciado, execute:
+
+```bash
+python -m src.ingest
+```
+O processo realizará:
+
+- Leitura do arquivo PDF
+- Extração do conteúdo textual.
+- Divisão do conteúdo em chunks.
+- Geração dos embeddings.
+-  Armazenamento dos vetores no PostgreSQL.
+
+### 3. Executar o Chat RAG
+Após concluir a ingestão, inicie o chat:
+
+```bash
+python -m src.chat
+```
+O sistema disponibilizará uma interface interativa no terminal.
+
+Exemplo:
+```
+============================================================
+       CHAT RAG - LANGCHAIN + POSTGRESQL
+============================================================
+
+Digite 'sair' para encerrar.
+
+Você: Qual é o assunto principal do documento?
+
+[1/3] Buscando documentos...
+[2/3] 10 documentos recuperados.
+[3/3] Consultando LLM...
+
+Assistente:
+------------------------------------------------------------
+Resposta baseada no conteúdo do documento.
+------------------------------------------------------------
+
+
+```
+
+Você:
+Para encerrar:
+
+```
+sair
+
+```
+
+
+O processo de recuperação utiliza busca por similaridade vetorial.
+
+Na implementação atual, são recuperados até 10 documentos (chunks) relevantes:
+
+
+``` python
+vector_store.similarity_search_with_score(
+    query=pergunta,
+    k=10
+)
+```
+
+
+Os documentos recuperados são concatenados e utilizados como contexto para a construção do prompt.
+
+O modelo de linguagem recebe o contexto e a pergunta do usuário.
+
+**Regras de resposta**  
+O modelo deve:
+- Responder somente com base no contexto recuperado.
+- Não inventar informações.
+- Não utilizar conhecimento externo para complementar respostas.
+- Informar quando não encontrar informações suficientes no documento.
+
+Mensagem padrão:
+- Não tenho informações necessárias para responder sua pergunta.
+
+#### Configurações e personalização
+
+É possível alterar algumas configurações por meio do arquivo `.env`:
+
+| Variável | Descrição |
+|---|---|
+| `PDF_PATH` | Caminho do PDF |
+| `EMBEDDING_PROVIDER` | Provedor dos embeddings |
+| `OPENAI_EMBEDDING_MODEL` | Modelo de embeddings OpenAI |
+| `GOOGLE_EMBEDDING_MODEL` | Modelo de embeddings Google |
+| `PG_VECTOR_COLLECTION_NAME` | Nome da collection |
+| `CHAT_MODEL` | Modelo de linguagem utilizado no chat |
+
+
+
+Atenção: caso altere o modelo de embeddings, verifique a compatibilidade dimensional com os vetores já armazenados. Se a dimensão for diferente, será necessário recriar a collection e realizar uma nova ingestão.
+
+ 
 
 ## Ordem de execução
 
-1. Subir o banco de dados:
+### 1. Subir o banco de dados:
 
 ```
 docker compose up -d
 ```
 
 
-
-
-
-2. Executar ingestão do PDF:
+### 2. Executar ingestão do PDF:
 
 
 ```
 python -m  src.ingest
 ```
 
-3. Rodar o chat:
+### 3. Rodar o chat:
 
 
 ```
 python -m src.chat
+```
+Instalar dependências
 
 ```
+pip install -r requirements.txt
+```
 
+### Considerações finais
+Este projeto demonstra a aplicação prática de uma arquitetura RAG utilizando tecnologias modernas de inteligência artificial e bancos de dados vetoriais.
 
-## Entregável
+A solução permite transformar documentos não estruturados em uma base de conhecimento consultável por linguagem natural, utilizando recuperação semântica e modelos de linguagem.
 
-Repositório público no GitHub contendo todo o código-fonte e README com instruções claras de execução do projeto.
+Autor
+Desenvolvido por Hestefania.
 
-Pergunta de exemplo : Qual o faturamento da Empresa SuperTechIABrazil?
+GitHub: https://github.com/hestefania 
+
+Projeto desenvolvido para o desafio de Ingestão e Busca Semântica da Full Cycle.
